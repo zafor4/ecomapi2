@@ -1,35 +1,40 @@
-const PaymentSession = require('ssl-commerz-node').PaymentSession;
-const { CartItem } = require('../models/cartItem');
-const { Profile } = require('../models/profile');
-const { Order } = require('../models/Order');
-const { Payment } = require('../models/payment');
-const { v4: uuidv4 } = require('uuid'); // Consider using UUID
+const PaymentSession=require('ssl-commerz-node').PaymentSession
+const { CartItem}=require('../models/cartItem')
+const { Profile } = require('../models/profile')
+const {Order}=require('../models/Order')
+const {Payment}=require('../models/payment')
+const { v4: uuidv4 } = require('uuid');
 
 module.exports.ipn = async (req, res) => {
-    try {
-        const payment = new Payment(req.body);
-        const tran_id = payment['tran_id'];
+  try {
+      const payment = new Payment(req.body);
+      const tran_id = payment['tran_id'];
 
-        if (payment['status'] === 'VALID') {
-            const order = await Order.findOne({ transaction_id: tran_id });
+      if (payment['status'] === 'VALID') {
+          const order = await Order.findOne({ transaction_id: tran_id });
 
-            if (order) {
-                await Order.updateOne({ transaction_id: tran_id }, { status: 'Complete' });
-                await CartItem.deleteMany({ _id: { $in: order.cartItems } });
-            } else {
-                console.error(`Order with transaction_id ${tran_id} not found`);
-            }
-        } else {
-            await Order.deleteOne({ transaction_id: tran_id });
-        }
+          if (order) {
+              await Order.updateOne({ transaction_id: tran_id }, { status: 'Complete' });
+              await CartItem.deleteMany({ _id: { $in: order.cartItems } });
+          } else {
+              // Order does not exist
+              console.error(`Order with transaction_id ${tran_id} not found`);
+          }
+      } else {
+          await Order.deleteOne({ transaction_id: tran_id });
+      }
 
-        await payment.save();
-        res.status(200).send("IPN Received");
-    } catch (error) {
-        console.error('IPN Error:', error);
-        res.status(500).send("Internal Server Error");
-    }
-};
+      await payment.save();
+      res.status(200).send("IPN Received");
+  } catch (error) {
+      console.error('IPN Error:', error);
+      res.status(500).send("Internal Server Error");
+  }
+}
+
+
+
+
 
 module.exports.initPayment = async (req, res) => {
     try {
@@ -45,11 +50,13 @@ module.exports.initPayment = async (req, res) => {
 
         const total_amount = cartItems.reduce((total, item) => total + (item.count * item.price), 0);
         const total_item = cartItems.reduce((total, item) => total + item.count, 0);
-        const tran_id = uuidv4(); // Use UUID for unique transaction IDs
+        const tran_id = uuidv4(); // Ensure tran_id is unique and not null
+
+        console.log('Generated Transaction ID:', tran_id);
 
         const payment = new PaymentSession(true, process.env.STORE_ID, process.env.STORE_PASSWORD);
         payment.setUrls({
-            success: `${process.env.BASE_URL}/success`, // Ensure BASE_URL is set correctly
+            success: `${process.env.BASE_URL}/success`,
             fail: `${process.env.BASE_URL}/fail`,
             cancel: `${process.env.BASE_URL}/cancel`,
             ipn: `${process.env.BASE_URL}/api/payment/ipn`,
@@ -106,4 +113,4 @@ module.exports.initPayment = async (req, res) => {
         console.error('Payment Initialization Error:', error);
         res.status(500).send("Internal Server Error");
     }
-};
+}
