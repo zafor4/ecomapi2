@@ -1,10 +1,21 @@
 const PaymentSession=require('ssl-commerz-node').PaymentSession
 const { CartItem}=require('../models/cartItem')
 const { Profile } = require('../models/profile')
-
+const {Order}=require('../models/Order')
+const {Payment}=require('../models/payment')
 
 module.exports.ipn=async (req,res)=>{
-  console.log(req.body)
+  const payment=new Payment(req.body);
+  const tran_id=payment['tran_id']
+  if (payment['status']==='VALID'){
+    const order=await Order.updateOne({transaction_id:tran_id},{status:'Complete'})
+    await CartItem.deleteMany(order.cartItems)
+  }
+  else {
+    await Order.deleteOne({transaction_id:tran_id})
+  }
+  await payment.save()
+  return res.status(200).send("IPN")
 }
 
 
@@ -80,5 +91,11 @@ module.exports.initPayment=async (req,res)=>{
       });
 
       response=await payment.paymentInit()
+      let order=new Order({cartItems:cartItems,user:userId,tran_id:tran_id,address:profile})
+
+      if (response.status==='SUCCESS'){
+        order.sessionKey=response['sessionkey']
+        await order.save()
+      }
       return res.status(200).send(response)
 }
