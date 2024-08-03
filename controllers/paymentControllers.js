@@ -36,7 +36,6 @@ module.exports.ipn = async (req, res) => {
 module.exports.initPayment = async (req, res) => {
   try {
       const userId = req.user._id;
-      console.log("Payment Control User Id",userId)
       const cartItems = await CartItem.find({ user: userId });
       const profile = await Profile.findOne({ user: userId });
 
@@ -55,14 +54,10 @@ module.exports.initPayment = async (req, res) => {
       });
 
       payment.setOrderInfo({
-          total_amount,
+          total_amount:total_amount,
           currency: "BDT",
-          tran_id,
+          tran_id:tran_id,
           emi_option: 0,
-          multi_card_name: "internetbank",
-          allowed_bin: "371598,371599,376947,376948,376949",
-          emi_max_inst_option: 3,
-          emi_allow_only: 0,
       });
 
       payment.setCusInfo({
@@ -70,11 +65,11 @@ module.exports.initPayment = async (req, res) => {
           email: req.user.email,
           add1: address1,
           add2: address2,
-          city,
-          state,
-          postcode,
-          country,
-          phone,
+          city:city,
+          state:state,
+          postcode:postcode,
+          country:country,
+          phone:phone,
           fax: phone,
       });
 
@@ -84,10 +79,10 @@ module.exports.initPayment = async (req, res) => {
           name: req.user.name,
           add1: address1,
           add2: address2,
-          city,
-          state,
-          postcode,
-          country,
+          city:city,
+          state:state,
+          postcode:postcode,
+          country:country,
       });
 
       payment.setProductInfo({
@@ -97,12 +92,7 @@ module.exports.initPayment = async (req, res) => {
       });
 
       const response = await payment.paymentInit();
-      const order = new Order({
-          cartItems: cartItems.map(item => item._id),
-          user: userId,
-          tran_id,
-          address: profile,
-      });
+      const order = new Order({ cartItems: cartItems, user: userId, transaction_id: tran_id, address: profile });
 
       if (response.status === 'SUCCESS') {
           order.sessionKey = response['sessionkey'];
