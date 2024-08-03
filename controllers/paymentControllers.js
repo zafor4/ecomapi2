@@ -34,9 +34,9 @@ module.exports.ipn = async (req, res) => {
 
 
 module.exports.initPayment = async (req, res) => {
-  console.log("Hello hello")
   try {
       const userId = req.user._id;
+      console.log("Payment Control User Id",userId)
       const cartItems = await CartItem.find({ user: userId });
       const profile = await Profile.findOne({ user: userId });
 
