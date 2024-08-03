@@ -1,63 +1,63 @@
-const PaymentSession=require('ssl-commerz-node').PaymentSession
-const { CartItem}=require('../models/cartItem')
-const { Profile } = require('../models/profile')
-const {Order}=require('../models/Order')
-const {Payment}=require('../models/payment')
+const { CartItem } = require('../models/cartItem');
+const { Profile } = require('../models/profile');
+const PaymentSession = require('ssl-commerz-node').PaymentSession;
+const { Order } = require('../models/Order');
+const { Payment } = require('../models/payment');
 
-module.exports.ipn=async (req,res)=>{
-  const payment=new Payment(req.body);
-  const tran_id=payment['tran_id']
-  if (payment['status']==='VALID'){
-    const order=await Order.updateOne({transaction_id:tran_id},{status:'Complete'})
-    await CartItem.deleteMany(order.cartItems)
-  }
-  else {
-    await Order.deleteOne({transaction_id:tran_id})
-  }
-  await payment.save()
-  return res.status(200).send("IPN")
+// Request a Session
+// Payment Process
+// Receive IPN
+// Create an Order 
+
+module.exports.ipn = async (req, res) => {
+    const payment = new Payment(req.body);
+    const tran_id = payment['tran_id'];
+    if (payment['status'] === 'VALID') {
+        const order = await Order.updateOne({ transaction_id: tran_id }, { status: 'Complete' });
+        await CartItem.deleteMany(order.cartItems);
+    } else {
+        await Order.deleteOne({ transaction_id: tran_id });
+    }
+    await payment.save();
+    return res.status(200).send("IPN");
+
 }
 
+module.exports.initPayment = async (req, res) => {
+    const userId = req.user._id;
+    const cartItems = await CartItem.find({ user: userId });
+    const profile = await Profile.findOne({ user: userId });
 
-module.exports.initPayment=async (req,res)=>{
+    const { address1, address2, city, state, postcode, country, phone } = profile;
 
-    const userId=req.user._id
-    const cartItems=await CartItem.find({user:userId})
-    const profile=await Profile.findOne({user:userId})
+    const total_amount = cartItems.map(item => item.count * item.price)
+        .reduce((a, b) => a + b, 0);
 
+    const total_item = cartItems.map(item => item.count)
+        .reduce((a, b) => a + b, 0);
 
-    const {address1,address2,city,state,postcode,country,phone}=profile
+    const tran_id = '_' + Math.random().toString(36).substr(2, 9) + (new Date()).getTime();
 
+    const payment = new PaymentSession(true, process.env.STORE_ID, process.env.STORE_PASSWORD);
 
-
-
-    const total_amount=cartItems.map(item=>item.count*item.price).reduce((a,b)=>a+b,0)
-    const total_item=cartItems.map(item=>item.count).reduce((a,b)=>a+b,0)
-    const tran_id='_'+Math.random().toString(36).substr(2,9)+(new Date()).getTime();
-
-
-    const payment=new PaymentSession(true,process.env.STORE_ID,process.env.STORE_PASSWORD)
+    // Set the urls
     payment.setUrls({
-        success: "yoursite.com/success", // If payment Succeed
-        fail: "yoursite.com/fail", // If payment failed
-        cancel: "yoursite.com/cancel", // If user cancel payment
-        ipn: "https://ecomapi2.onrender.com/api/payment/ipn", // SSLCommerz will send http post request in this link
-      });
-      
-      // Set order details
-      payment.setOrderInfo({
+        success: 'yoursite.com/success', // If payment Succeed
+        fail: 'yoursite.com/fail', // If payment failed
+        cancel: 'yoursite.com/cancel', // If user cancel payment
+        ipn: 'https://ecomapi2.onrender.com/api/payment/ipn' // SSLCommerz will send http post request in this link
+    });
+
+    // Set order details
+    payment.setOrderInfo({
         total_amount: total_amount, // Number field
-        currency: "BDT", // Must be three character string
-        tran_id: tran_id, // Unique Transaction id
+        currency: 'BDT', // Must be three character string
+        tran_id: tran_id, // Unique Transaction id 
         emi_option: 0, // 1 or 0
-        multi_card_name: "internetbank", // Do not Use! If you do not customize the gateway list,
-        allowed_bin: "371598,371599,376947,376948,376949", // Do not Use! If you do not control on transaction
-        emi_max_inst_option: 3, // Max instalment Option
-        emi_allow_only: 0, // Value is 1/0, if value is 1 then only EMI transaction is possible
-      });
-      
-      // Set customer info
-      payment.setCusInfo({
+    });
+
+    // Set customer info
+    payment.setCusInfo({
         name: req.user.name,
         email: req.user.email,
         add1: address1,
@@ -67,12 +67,12 @@ module.exports.initPayment=async (req,res)=>{
         postcode: postcode,
         country: country,
         phone: phone,
-        fax: phone,
-      });
-      
-      // Set shipping info
-      payment.setShippingInfo({
-        method: "Courier", //Shipping method of the order. Example: YES or NO or Courier
+        fax: phone
+    });
+
+    // Set shipping info
+    payment.setShippingInfo({
+        method: 'Courier', //Shipping method of the order. Example: YES or NO or Courier
         num_item: total_item,
         name: req.user.name,
         add1: address1,
@@ -81,21 +81,20 @@ module.exports.initPayment=async (req,res)=>{
         state: state,
         postcode: postcode,
         country: country,
-      });
-      
-      // Set Product Profile
-      payment.setProductInfo({
-        product_name: "ecom Products",
-        product_category: "General",
-        product_profile: "general",
-      });
+    });
 
-      response=await payment.paymentInit()
-      let order=new Order({cartItems:cartItems,user:userId,tran_id:tran_id,address:profile})
+    // Set Product Profile
+    payment.setProductInfo({
+        product_name: 'Bohubrihi E-com Products',
+        product_category: 'General',
+        product_profile: 'general'
+    });
 
-      if (response.status==='SUCCESS'){
-        order.sessionKey=response['sessionkey']
-        await order.save()
-      }
-      return res.status(200).send(response)
+    response = await payment.paymentInit();
+    const order = new Order({ cartItems: cartItems, user: userId, transaction_id: tran_id, address: profile });
+    if (response.status === 'SUCCESS') {
+        order.sessionKey = response['sessionkey'];
+        await order.save();
+    }
+    return res.status(200).send(response);
 }
