@@ -107,8 +107,11 @@ module.exports.initPayment = async (req, res) => {
     if (response.status === 'SUCCESS') {
         order.sessionKey = response['sessionkey'];
         console.log("Order console:",order)
-        await order.save();
-        console.log("Error is here")
+        try {
+            await order.save();
+          } catch (error) {
+            console.error('Error saving order:', error);
+          }
     }
     return res.status(200).send(response);
 }
