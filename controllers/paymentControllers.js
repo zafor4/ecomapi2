@@ -102,6 +102,7 @@ module.exports.initPayment = async (req, res) => {
 
     response = await payment.paymentInit();
     const order = new Order({ cartItems: cartItems, user: userId, transaction_id: tran_id, address: profile });
+    console.log("Order console:",order)
 
     if (response.status === 'SUCCESS') {
         order.sessionKey = response['sessionkey'];
