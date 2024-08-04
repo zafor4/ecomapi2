@@ -109,11 +109,9 @@ module.exports.initPayment = async (req, res) => {
         console.log("Order console:",order)
         try {
             await order.save();
-            return res.status(200).send(response);
           } catch (error) {
             console.error('Error saving order:', error);
-            return res.status(3290).send("Odvut error")
           }
     }
-
+    return res.status(200).send(response);
 }
