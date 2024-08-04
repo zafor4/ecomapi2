@@ -3,6 +3,7 @@ const { Profile } = require('../models/profile');
 const PaymentSession = require('ssl-commerz-node').PaymentSession;
 const { Order } = require('../models/Order');
 const { Payment } = require('../models/payment');
+const path=require('path')
 
 // Request a Session
 // Payment Process
@@ -51,9 +52,9 @@ module.exports.initPayment = async (req, res) => {
 
     // Set the urls
     payment.setUrls({
-        success: 'yoursite.com/success', // If payment Succeed
-        fail: 'yoursite.com/fail', // If payment failed
-        cancel: 'yoursite.com/cancel', // If user cancel payment
+        success: 'https://ecomapi2.onrender.com/api/payment/success', // If payment Succeed
+        fail: 'https://ecomapi2.onrender.com/api/payment/fail', // If payment failed
+        cancel: 'https://ecomapi2.onrender.com/api/payment/cancel', // If user cancel payment
         ipn: 'https://ecomapi2.onrender.com/api/payment/ipn' // SSLCommerz will send http post request in this link
     });
 
@@ -114,4 +115,8 @@ module.exports.initPayment = async (req, res) => {
           }
     }
     return res.status(200).send(response);
+}
+
+module.exports.paymentSuccess=async (req,res)=>{
+res.sendFile(path.join(_basedir+ "public/success.html"))
 }

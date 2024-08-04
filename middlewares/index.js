@@ -7,6 +7,7 @@ const morgan = require('morgan');
 module.exports=(app)=>{
     app.use(compression())
     app.use(express.json());
+    app.use(express.static('public'))
     app.use(express.urlencoded({extended:true}))
 app.use(cors());
 

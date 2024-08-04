@@ -3,6 +3,9 @@ const app = require('./app');
 const mongoose = require('mongoose');
 
 
+global._basedir=__dirname;
+
+
 const DB=process.env.MONGODB_SERVER
 
 mongoose.connect(DB)
