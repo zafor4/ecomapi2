@@ -11,6 +11,7 @@ const { Payment } = require('../models/payment');
 
 module.exports.ipn = async (req, res) => {
     const payment = new Payment(req.body);
+    console.log("Debug terminal 1.2",req.body)
     const tran_id = payment['tran_id'];
     if (payment['status'] === 'VALID') {
         const order = await Order.updateOne({ transaction_id: tran_id }, { status: 'Complete' });
@@ -24,9 +25,12 @@ module.exports.ipn = async (req, res) => {
 }
 
 module.exports.initPayment = async (req, res) => {
+    console.log("Debug terminal 1",req.user,req.body)
     const userId = req.user._id;
     const cartItems = await CartItem.find({ user: userId });
     const profile = await Profile.findOne({ user: userId });
+
+    console.log("debug terminal 2",cartItems,profile)
 
     const { address1, address2, city, state, postcode, country, phone } = profile;
 
@@ -38,14 +42,19 @@ module.exports.initPayment = async (req, res) => {
 
     const tran_id = '_' + Math.random().toString(36).substr(2, 9) + (new Date()).getTime();
 
+
+    console.log("debug terminal 3", tran_id)
+
     const payment = new PaymentSession(true, process.env.STORE_ID, process.env.STORE_PASSWORD);
+
+    console.log("Debug terminal 4",payment)
 
     // Set the urls
     payment.setUrls({
         success: 'yoursite.com/success', // If payment Succeed
         fail: 'yoursite.com/fail', // If payment failed
         cancel: 'yoursite.com/cancel', // If user cancel payment
-        ipn: 'https://secret-stream-23319.herokuapp.com/api/payment/ipn' // SSLCommerz will send http post request in this link
+        ipn: 'https://ecomapi2.onrender.com/api/payment/ipn' // SSLCommerz will send http post request in this link
     });
 
     // Set order details
@@ -89,9 +98,11 @@ module.exports.initPayment = async (req, res) => {
         product_category: 'General',
         product_profile: 'general'
     });
+    console.log("debug terminal 5",payment)
 
     response = await payment.paymentInit();
     const order = new Order({ cartItems: cartItems, user: userId, transaction_id: tran_id, address: profile });
+    console.log("Debug terminal 6",response)
     if (response.status === 'SUCCESS') {
         order.sessionKey = response['sessionkey'];
         await order.save();
