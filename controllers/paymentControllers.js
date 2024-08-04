@@ -102,10 +102,13 @@ module.exports.initPayment = async (req, res) => {
 
     response = await payment.paymentInit();
     const order = new Order({ cartItems: cartItems, user: userId, transaction_id: tran_id, address: profile });
-    console.log("Debug terminal 6",response)
+
     if (response.status === 'SUCCESS') {
         order.sessionKey = response['sessionkey'];
+        console.log("Debug terminal 6",response)
+
         await order.save();
+        console.log("Error is here")
     }
     return res.status(200).send(response);
 }
